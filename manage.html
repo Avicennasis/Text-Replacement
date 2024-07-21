@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Avic's Text Replacements</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #ffffff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #1e1e1e;
+        }
+        tr:nth-child(even) {
+            background-color: #1e1e1e;
+        }
+        tr:nth-child(odd) {
+            background-color: #282828;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 5px;
+            border: none;
+            background-color: #333;
+            color: #fff;
+        }
+        input[type="checkbox"] {
+            transform: scale(1.5);
+        }
+        .button {
+            background-color: #6200ea;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #3700b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Avic's Text Replacements</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Original Text</th>
+                <th>Replacement Text</th>
+                <th>Case Sensitive?</th>
+                <th>Remove</th>
+            </tr>
+        </thead>
+        <tbody id="replacementList">
+            <!-- Dynamically populated rows will go here -->
+        </tbody>
+    </table>
+    <h2>Add New Replacement</h2>
+    <form id="addReplacementForm">
+        <label for="newOriginal">Original Text:</label>
+        <input type="text" id="newOriginal" name="newOriginal" required>
+        <br>
+        <label for="newReplacement">Replacement Text:</label>
+        <input type="text" id="newReplacement" name="newReplacement" required>
+        <br>
+        <label for="newCaseSensitive">Case Sensitive?</label>
+        <input type="checkbox" id="newCaseSensitive" name="newCaseSensitive">
+        <br>
+        <button type="submit" class="button">Add Replacement</button>
+    </form>
+
+    <script src="manage.js"></script>
+</body>
+</html>
