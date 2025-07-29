@@ -33,12 +33,12 @@ function addRowToTable(originalText, replacement, caseSensitive) {
     const originalTextInput = document.createElement('input');
     originalTextInput.type = 'text';
     originalTextInput.value = originalText;
-    originalTextInput.addEventListener('input', () => updateReplacement(originalText, 'originalText', originalTextInput.value));
+    originalTextInput.addEventListener('change', () => updateReplacement(originalText, 'originalText', originalTextInput.value));
 
     const replacementTextInput = document.createElement('input');
     replacementTextInput.type = 'text';
     replacementTextInput.value = replacement;
-    replacementTextInput.addEventListener('input', () => updateReplacement(originalText, 'replacement', replacementTextInput.value));
+    replacementTextInput.addEventListener('change', () => updateReplacement(originalText, 'replacement', replacementTextInput.value));
 
     const caseSensitiveCheckbox = document.createElement('input');
     caseSensitiveCheckbox.type = 'checkbox';
@@ -68,14 +68,26 @@ function updateReplacement(originalText, field, newValue) {
         const wordMap = data.wordMap || {};
         if (!wordMap[originalText]) return;
 
+        const originalData = wordMap[originalText]; // Keep a copy
+
+        // If the original text key is being changed
         if (field === 'originalText') {
-            wordMap[newValue] = wordMap[originalText];
+            // Do nothing if the new key is empty or already exists
+            if (!newValue || wordMap[newValue]) {
+                // Optional: provide user feedback here
+                loadWordMap(); // a reload resets the input to its original value
+                return;
+            }
             delete wordMap[originalText];
+            wordMap[newValue] = originalData;
         } else {
             wordMap[originalText][field] = newValue;
         }
 
-        chrome.storage.sync.set({ wordMap });
+        // Save the updated map and reload the whole table to re-bind events
+        chrome.storage.sync.set({ wordMap }, () => {
+            loadWordMap();
+        });
     });
 }
 
