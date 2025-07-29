@@ -1,44 +1,40 @@
-chrome.runtime.sendMessage({ action: 'getWordMap' }, (response) => {
-  if (response && response.wordMap) {
-    replaceText(response.wordMap);
-  }
-});
-
-function replaceText(wordMap) {
-  function walk(node) {
-    let child, next;
-
-    switch (node.nodeType) {
-      case 1:  // Element
-      case 9:  // Document
-      case 11: // Document fragment
-        child = node.firstChild;
-        while (child) {
-          next = child.nextSibling;
-          walk(child);
-          child = next;
-        }
-        break;
-
-      case 3: // Text node
-        handleText(node);
-        break;
-    }
-  }
-
-  function handleText(textNode) {
-    let text = textNode.nodeValue;
-    for (let [word, { replacement, caseSensitive }] of Object.entries(wordMap)) {
-      if (replacement === undefined) {
-        continue;
-      }
-      // Create a regular expression with the appropriate flags
+function replaceTextInNode(node, wordMap) {
+  // Only process text nodes
+  if (node.nodeType === 3) {
+    let text = node.nodeValue;
+    for (const [word, { replacement, caseSensitive }] of Object.entries(wordMap)) {
+      if (replacement === undefined) continue;
       const regexFlags = caseSensitive ? 'g' : 'gi';
       const regex = new RegExp(`\\b${word}\\b`, regexFlags);
       text = text.replace(regex, replacement);
     }
-    textNode.nodeValue = text;
+    node.nodeValue = text;
   }
-
-  walk(document.body);
+  // Recursively call for child nodes
+  else if (node.nodeType === 1 && node.childNodes) {
+    node.childNodes.forEach(child => replaceTextInNode(child, wordMap));
+  }
 }
+
+chrome.storage.sync.get('wordMap', (data) => {
+  if (data.wordMap) {
+    const wordMap = data.wordMap;
+    
+    // Initial replacement on page load
+    replaceTextInNode(document.body, wordMap);
+
+    // Observe for future changes to the DOM
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          replaceTextInNode(node, wordMap);
+        });
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+});
