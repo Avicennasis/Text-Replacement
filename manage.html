@@ -1,88 +1,379 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Avic's Text Replacements</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Replacements</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --accent: #ff0055;
+            --bg-dark: #0f172a;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 40px;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 10% 20%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 0, 85, 0.1) 0%, transparent 40%);
+            background-attachment: fixed;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
         }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
         h1 {
-            color: #ffffff;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+            letter-spacing: -1px;
         }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-top: 10px;
+            font-weight: 300;
+        }
+
+        /* Toggle Switch CSS */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            vertical-align: middle;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: var(--text-muted);
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: rgba(0, 242, 254, 0.2);
+            border-color: var(--secondary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+            background-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        /* Master Switch Styled Differently */
+        .master-switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .master-label {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+
+        /* Form Section */
+        .add-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 40px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+            transition: all 0.3s ease;
+        }
+
+        .add-section:focus-within {
+            border-color: rgba(79, 172, 254, 0.5);
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.1);
+        }
+
+        .input-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-left: 4px;
+        }
+
+        input[type="text"] {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 0 4px rgba(0, 242, 254, 0.1);
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            border: none;
+            border-radius: 12px;
+            padding: 0 24px;
+            height: 48px;
+            color: #000;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.3);
+        }
+
+        .btn-add:active {
+            transform: translateY(0);
+        }
+
+        /* Table Section */
+        .table-container {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
         }
-        th, td {
-            border: 1px solid #333;
-            padding: 10px;
-            text-align: left;
-        }
+
         th {
-            background-color: #1e1e1e;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 16px 24px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        tr:nth-child(even) {
-            background-color: #1e1e1e;
+
+        td {
+            padding: 16px 24px;
+            border-top: 1px solid var(--glass-border);
+            transition: background 0.2s;
+            vertical-align: middle;
         }
-        tr:nth-child(odd) {
-            background-color: #282828;
+
+        tr {
+            transition: opacity 0.3s;
         }
-        input[type="text"] {
-            width: 100%;
-            padding: 5px;
-            border: none;
-            background-color: #333;
-            color: #fff;
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
         }
-        input[type="checkbox"] {
-            transform: scale(1.5);
+
+        /* Inline editing inputs */
+        td input[type="text"] {
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 8px 0;
+            border-radius: 0;
+            margin: -8px 0;
         }
-        .button {
-            background-color: #6200ea;
-            color: #fff;
-            padding: 10px 20px;
-            border: none;
+
+        td input[type="text"]:focus {
+            background: transparent;
+            border-bottom: 2px solid var(--primary);
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .btn-remove {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--glass-border);
+            padding: 8px 16px;
+            border-radius: 8px;
             cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
         }
-        .button:hover {
-            background-color: #3700b3;
+
+        .btn-remove:hover {
+            background: rgba(255, 0, 85, 0.1);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        #status {
+            text-align: center;
+            font-weight: 500;
+            margin-bottom: 20px;
+            min-height: 24px;
+            opacity: 0.9;
+            text-shadow: 0 0 10px rgba(0, 230, 118, 0.3);
         }
     </style>
 </head>
+
 <body>
-    <h1>Avic's Text Replacements</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Original Text</th>
-                <th>Replacement Text</th>
-                <th>Case Sensitive?</th>
-                <th>Remove</th>
-            </tr>
-        </thead>
-        <tbody id="replacementList">
-            <!-- Dynamically populated rows will go here -->
-        </tbody>
-    </table>
-    <h2>Add New Replacement</h2>
-    <form id="addReplacementForm">
-        <label for="newOriginal">Original Text:</label>
-        <input type="text" id="newOriginal" name="newOriginal" required>
-        <br>
-        <label for="newReplacement">Replacement Text:</label>
-        <input type="text" id="newReplacement" name="newReplacement" required>
-        <br>
-        <label for="newCaseSensitive">Case Sensitive?</label>
-        <input type="checkbox" id="newCaseSensitive" name="newCaseSensitive">
-        <br>
-        <button type="submit" class="button">Add Replacement</button>
-    </form>
+    <div class="container">
+        <header>
+            <h1>Text Replacements</h1>
+            <p class="subtitle">Customize your web experience</p>
+        </header>
+
+        <div class="master-switch-container">
+            <span class="master-label">Extension Enabled</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="masterSwitch">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div id="status"></div>
+
+        <form id="addReplacementForm" class="add-section">
+            <div class="input-group">
+                <label for="newOriginal">Original String</label>
+                <input type="text" id="newOriginal" name="newOriginal" placeholder="e.g. 'cat'" required
+                    autocomplete="off">
+            </div>
+
+            <div class="input-group">
+                <label for="newReplacement">Replacement String</label>
+                <input type="text" id="newReplacement" name="newReplacement" placeholder="e.g. 'dog'" required
+                    autocomplete="off">
+            </div>
+
+            <div class="input-group" style="flex: 0 0 auto; align-items: center; min-width: 80px;">
+                <label>Match Case</label>
+                <!-- Form specific toggle -->
+                <div style="margin-top: 12px;">
+                    <label class="toggle-switch" title="Match Case?">
+                        <input type="checkbox" id="newCaseSensitive" name="newCaseSensitive">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-add">Add Rule</button>
+        </form>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th width="30%">Original String</th>
+                        <th width="30%">Replacement String</th>
+                        <th width="10%" style="text-align: center;">Match Case</th>
+                        <th width="10%" style="text-align: center;">Enabled</th>
+                        <th width="20%"></th> <!-- Empty header for Remove button -->
+                    </tr>
+                </thead>
+                <tbody id="replacementList">
+                    <!-- Rows will be injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <script src="manage.js"></script>
 </body>
+
 </html>
