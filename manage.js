@@ -115,6 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('importFile').addEventListener('change', (e) => {
         importRules(e.target.files[0]);
     });
+
+    // Listen for search box input (with debouncing for better performance)
+    let searchTimeout;
+    document.getElementById('searchBox').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filterRules(e.target.value);
+        }, 150); // 150ms debounce to avoid filtering on every keystroke
+    });
 });
 
 /**
@@ -702,4 +711,68 @@ function importRules(file) {
 
     // Reset the file input so the same file can be selected again if needed
     document.getElementById('importFile').value = '';
+}
+
+// -----------------------------------------------------------------------------
+// SEARCH/FILTER FUNCTIONALITY
+// Helps users quickly find specific rules when they have many.
+// -----------------------------------------------------------------------------
+
+/**
+ * Filters the rules table based on search query.
+ * Searches in both original text and replacement text columns.
+ * Case-insensitive search for better user experience.
+ *
+ * @param {string} query - The search term entered by the user
+ */
+function filterRules(query) {
+    const searchQuery = query.toLowerCase().trim();
+    const rows = document.querySelectorAll('#replacementList tr');
+    let visibleCount = 0;
+    let totalCount = rows.length;
+
+    // If search is empty, show all rows
+    if (!searchQuery) {
+        rows.forEach(row => {
+            row.style.display = '';
+        });
+        document.getElementById('searchResults').textContent = '';
+        return;
+    }
+
+    // Filter rows based on search query
+    rows.forEach(row => {
+        // Get the text inputs from the row (original and replacement text)
+        const inputs = row.querySelectorAll('input[type="text"]');
+        if (inputs.length < 2) return; // Safety check
+
+        const originalText = inputs[0].value.toLowerCase();
+        const replacementText = inputs[1].value.toLowerCase();
+
+        // Check if either column contains the search query
+        const matches = originalText.includes(searchQuery) || replacementText.includes(searchQuery);
+
+        // Show or hide the row based on match
+        if (matches) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Update the search results counter
+    const resultsEl = document.getElementById('searchResults');
+    if (visibleCount === 0) {
+        resultsEl.textContent = 'No matches found';
+        resultsEl.style.color = '#ff1744'; // Red for no results
+    } else if (visibleCount === totalCount) {
+        resultsEl.textContent = `Showing all ${totalCount} rules`;
+        resultsEl.style.color = 'var(--text-muted)';
+    } else {
+        resultsEl.textContent = `Showing ${visibleCount} of ${totalCount} rules`;
+        resultsEl.style.color = 'var(--primary)'; // Highlight when filtering
+    }
+
+    Logger.debug('Search query:', searchQuery, '| Visible:', visibleCount, '/', totalCount);
 }

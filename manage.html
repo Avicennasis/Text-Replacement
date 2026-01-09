@@ -270,6 +270,44 @@
             transform: translateY(0);
         }
 
+        /* Search Box */
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        #searchBox {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        #searchBox:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 0 4px rgba(0, 242, 254, 0.1);
+        }
+
+        .search-results {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
         /* Table Section */
         .table-container {
             border-radius: 16px;
@@ -402,6 +440,12 @@
 
             <button type="submit" class="btn-add">Add Rule</button>
         </form>
+
+        <!-- Search Box -->
+        <div class="search-container">
+            <input type="text" id="searchBox" placeholder="🔍 Search rules..." autocomplete="off">
+            <span id="searchResults" class="search-results"></span>
+        </div>
 
         <div class="table-container">
             <table>
