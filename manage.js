@@ -16,6 +16,16 @@
 const SYNC_QUOTA_BYTES = chrome.storage.sync.QUOTA_BYTES || 102400; // 100 KB
 const QUOTA_BYTES_PER_ITEM = chrome.storage.sync.QUOTA_BYTES_PER_ITEM || 8192; // 8 KB
 
+// -----------------------------------------------------------------------------
+// SAFETY LIMITS
+// These limits protect against performance issues and potential ReDoS attacks.
+// - MAX_RULES: Prevents creating so many rules that the browser hangs
+// - MAX_PATTERN_LENGTH: Prevents extremely long patterns that could cause regex issues
+// These are reasonable limits that 99% of users will never hit.
+// -----------------------------------------------------------------------------
+const MAX_RULES = 255; // Maximum number of replacement rules allowed
+const MAX_PATTERN_LENGTH = 255; // Maximum length for original text or replacement text
+
 /**
  * Estimates the storage size (in bytes) of the wordMap object.
  * Chrome storage counts JSON-serialized size, so we stringify to measure.
@@ -220,6 +230,16 @@ function addRowToTable(originalText, replacement, caseSensitive, enabled) {
  * Updates a specific field of an existing rule in storage.
  */
 function updateReplacement(originalText, field, newValue) {
+    // SAFETY CHECK: Validate pattern length when editing text fields
+    // This prevents users from accidentally creating overly long patterns
+    if ((field === 'originalText' || field === 'replacement') && typeof newValue === 'string') {
+        if (newValue.length > MAX_PATTERN_LENGTH) {
+            showStatus(`Text too long! Maximum ${MAX_PATTERN_LENGTH} characters allowed.`, true);
+            loadWordMap(); // Reset UI to previous valid state
+            return;
+        }
+    }
+
     chrome.storage.sync.get('wordMap', (data) => {
         const wordMap = data.wordMap || {};
         if (!wordMap[originalText]) return;
@@ -278,8 +298,27 @@ function addReplacement() {
     const newReplacement = document.getElementById('newReplacement').value;
     const newCaseSensitive = document.getElementById('newCaseSensitive').checked;
 
+    // SAFETY CHECK: Validate pattern length to prevent performance issues
+    // Very long patterns can cause the browser to freeze when processing large pages
+    if (newOriginal.length > MAX_PATTERN_LENGTH) {
+        showStatus(`Original text too long! Maximum ${MAX_PATTERN_LENGTH} characters allowed.`, true);
+        return;
+    }
+
+    if (newReplacement.length > MAX_PATTERN_LENGTH) {
+        showStatus(`Replacement text too long! Maximum ${MAX_PATTERN_LENGTH} characters allowed.`, true);
+        return;
+    }
+
     chrome.storage.sync.get('wordMap', (data) => {
         const wordMap = data.wordMap || {};
+
+        // SAFETY CHECK: Limit total number of rules to prevent browser slowdown
+        // Having hundreds of rules can make regex compilation and page processing very slow
+        if (Object.keys(wordMap).length >= MAX_RULES) {
+            showStatus(`Maximum ${MAX_RULES} rules allowed. Please remove some rules before adding more.`, true);
+            return;
+        }
 
         // Prevent duplicates
         if (wordMap[newOriginal]) {
