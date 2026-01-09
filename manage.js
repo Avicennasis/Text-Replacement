@@ -32,6 +32,19 @@ const MAX_PATTERN_LENGTH = 255; // Maximum length for original text or replaceme
 // -----------------------------------------------------------------------------
 const STATUS_DISPLAY_DURATION_MS = 3000; // How long to show status messages (3 seconds)
 
+// -----------------------------------------------------------------------------
+// LOGGING UTILITY
+// Simple logging system for consistent error reporting and debugging.
+// -----------------------------------------------------------------------------
+const ENABLE_DEBUG_LOGGING = false; // Toggle for debug logs
+
+const Logger = {
+  info: (message, ...args) => console.log(`[Text Replacement] ${message}`, ...args),
+  debug: (message, ...args) => ENABLE_DEBUG_LOGGING && console.log(`[Text Replacement DEBUG] ${message}`, ...args),
+  warn: (message, ...args) => console.warn(`[Text Replacement WARNING] ${message}`, ...args),
+  error: (message, ...args) => console.error(`[Text Replacement ERROR] ${message}`, ...args)
+};
+
 /**
  * Estimates the storage size (in bytes) of the wordMap object.
  * Chrome storage counts JSON-serialized size, so we stringify to measure.
@@ -96,7 +109,7 @@ function loadSettings() {
     chrome.storage.sync.get('extensionEnabled', (data) => {
         // Error handling: Check if the Chrome API call failed
         if (chrome.runtime.lastError) {
-            console.error('Failed to load settings:', chrome.runtime.lastError);
+            Logger.error('Failed to load settings:', chrome.runtime.lastError);
             showStatus('Error loading settings. Please refresh the page.', true);
             return;
         }
@@ -113,10 +126,11 @@ function loadSettings() {
 function updateMasterSwitch(isEnabled) {
     chrome.storage.sync.set({ extensionEnabled: isEnabled }, () => {
         if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError);
+            Logger.error('Failed to save master switch setting:', chrome.runtime.lastError);
             showStatus('Error saving setting.', true);
         } else {
             showStatus(isEnabled ? 'Extension Enabled' : 'Extension Disabled');
+            Logger.debug('Master switch updated:', isEnabled);
         }
     });
 }
@@ -128,7 +142,7 @@ function loadWordMap() {
     chrome.storage.sync.get('wordMap', (data) => {
         // Error handling: Check if the Chrome API call failed
         if (chrome.runtime.lastError) {
-            console.error('Failed to load word map:', chrome.runtime.lastError);
+            Logger.error('Failed to load word map:', chrome.runtime.lastError);
             showStatus('Error loading rules. Please refresh the page.', true);
             return;
         }
@@ -268,7 +282,7 @@ function updateReplacement(originalText, field, newValue) {
     chrome.storage.sync.get('wordMap', (data) => {
         // Error handling: Check if the Chrome API call failed
         if (chrome.runtime.lastError) {
-            console.error('Failed to get word map for update:', chrome.runtime.lastError);
+            Logger.error('Failed to get word map for update:', chrome.runtime.lastError);
             showStatus('Error loading data. Changes not saved.', true);
             loadWordMap(); // Revert UI to previous state
             return;
@@ -329,11 +343,11 @@ function updateReplacement(originalText, field, newValue) {
         // Save back to storage
         chrome.storage.sync.set({ wordMap }, () => {
             if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
+                Logger.error('Failed to save replacement update:', chrome.runtime.lastError);
                 showStatus('Error saving changes.', true);
                 loadWordMap(); // Revert on failure
             } else {
-                console.log('Word map updated');
+                Logger.debug('Word map updated successfully');
                 // Don't show "Saved" toast for every keystroke, mostly for buttons
                 if (field !== 'originalText' && field !== 'replacement') {
                     // Logic for toggles
@@ -384,7 +398,7 @@ function addReplacement() {
     chrome.storage.sync.get('wordMap', (data) => {
         // Error handling: Check if the Chrome API call failed
         if (chrome.runtime.lastError) {
-            console.error('Failed to get word map for adding rule:', chrome.runtime.lastError);
+            Logger.error('Failed to get word map for adding rule:', chrome.runtime.lastError);
             showStatus('Error loading data. Rule not added.', true);
             return;
         }
@@ -422,9 +436,10 @@ function addReplacement() {
         // Save
         chrome.storage.sync.set({ wordMap }, () => {
             if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
+                Logger.error('Failed to add new replacement:', chrome.runtime.lastError);
                 showStatus('Error adding replacement. Storage full?', true);
             } else {
+                Logger.debug('New replacement added:', newOriginal, '→', newReplacement);
                 // On success, update UI instantly without full reload
                 addRowToTable(newOriginal, newReplacement, newCaseSensitive, true);
 
@@ -446,7 +461,7 @@ function removeReplacement(originalText) {
     chrome.storage.sync.get('wordMap', (data) => {
         // Error handling: Check if the Chrome API call failed
         if (chrome.runtime.lastError) {
-            console.error('Failed to get word map for removal:', chrome.runtime.lastError);
+            Logger.error('Failed to get word map for removal:', chrome.runtime.lastError);
             showStatus('Error loading data. Rule not removed.', true);
             return;
         }
@@ -456,10 +471,11 @@ function removeReplacement(originalText) {
 
         chrome.storage.sync.set({ wordMap }, () => {
             if (chrome.runtime.lastError) {
-                console.error('Failed to save after removal:', chrome.runtime.lastError);
+                Logger.error('Failed to save after removal:', chrome.runtime.lastError);
                 showStatus('Error removing replacement.', true);
                 loadWordMap(); // Reload to revert to previous state
             } else {
+                Logger.debug('Replacement removed:', originalText);
                 loadWordMap(); // Reload table to reflect removal
                 showStatus('Replacement removed.');
             }

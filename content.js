@@ -17,6 +17,50 @@
 // -----------------------------------------------------------------------------
 const REGEX_TIMEOUT_MS = 100; // Maximum time (in milliseconds) to process a single text node
 
+// -----------------------------------------------------------------------------
+// LOGGING UTILITY
+// Simple logging system with levels. Set ENABLE_DEBUG_LOGGING to true to see
+// detailed logs in the console. Useful for troubleshooting issues.
+// In production, keep this false to reduce console noise.
+// -----------------------------------------------------------------------------
+const ENABLE_DEBUG_LOGGING = false; // Toggle this to enable/disable debug logs
+
+const Logger = {
+  /**
+   * Logs informational messages (always shown, even when debug is off)
+   * Use for important events like "Extension installed"
+   */
+  info: (message, ...args) => {
+    console.log(`[Text Replacement] ${message}`, ...args);
+  },
+
+  /**
+   * Logs debug messages (only shown when ENABLE_DEBUG_LOGGING is true)
+   * Use for detailed technical information during development
+   */
+  debug: (message, ...args) => {
+    if (ENABLE_DEBUG_LOGGING) {
+      console.log(`[Text Replacement DEBUG] ${message}`, ...args);
+    }
+  },
+
+  /**
+   * Logs warnings (always shown)
+   * Use for recoverable problems or unexpected situations
+   */
+  warn: (message, ...args) => {
+    console.warn(`[Text Replacement WARNING] ${message}`, ...args);
+  },
+
+  /**
+   * Logs errors (always shown)
+   * Use for actual failures and exceptions
+   */
+  error: (message, ...args) => {
+    console.error(`[Text Replacement ERROR] ${message}`, ...args);
+  }
+};
+
 /**
  * Escapes special characters in a string to safe-guard against Regular Expression issues.
  * This prevents a "Regex Injection" attack and ensures that characters like "." or "*"
@@ -182,7 +226,7 @@ function processNode(node) {
     // This is better than hanging the entire browser!
     // The user won't notice - only this one text block is skipped.
     if (error.message === 'Regex timeout') {
-      console.warn('Text replacement timeout on node (skipping):', node.nodeValue?.substring(0, 50));
+      Logger.warn('Regex timeout on node (skipping):', node.nodeValue?.substring(0, 50));
       return;
     }
     // Re-throw unexpected errors for debugging
@@ -321,16 +365,19 @@ if (document.body) {
 chrome.storage.sync.get(['wordMap', 'extensionEnabled'], (data) => {
   // Handle errors gracefully
   if (chrome.runtime.lastError) {
-    console.error('Text Replacement: Failed to load settings:', chrome.runtime.lastError);
+    Logger.error('Failed to load settings:', chrome.runtime.lastError);
     return;
   }
 
   extensionEnabled = data.extensionEnabled !== false;
+  Logger.debug('Settings loaded. Extension enabled:', extensionEnabled);
+  Logger.debug('Number of rules loaded:', data.wordMap ? Object.keys(data.wordMap).length : 0);
 
   // Build the rules and run the first pass
   if (data.wordMap && extensionEnabled) {
     updateRegexes(data.wordMap);
     processDocument();
+    Logger.debug('Initial document processing complete');
   }
 });
 
