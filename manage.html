@@ -141,7 +141,7 @@
             align-items: center;
             justify-content: center;
             gap: 16px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             padding: 20px;
             background: rgba(255, 255, 255, 0.02);
             border-radius: 16px;
@@ -152,6 +152,45 @@
             font-weight: 600;
             font-size: 1.1rem;
             color: var(--text-main);
+        }
+
+        /* Export/Import Section */
+        .export-import-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 10px 20px;
+            color: var(--text-main);
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(79, 172, 254, 0.1);
+            border-color: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.2);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
         }
 
         /* Form Section */
@@ -326,6 +365,13 @@
                 <input type="checkbox" id="masterSwitch">
                 <span class="slider"></span>
             </label>
+        </div>
+
+        <!-- Export/Import Section -->
+        <div class="export-import-section">
+            <button id="exportBtn" class="btn-secondary">📥 Export Rules</button>
+            <button id="importBtn" class="btn-secondary">📤 Import Rules</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;">
         </div>
 
         <div id="status"></div>

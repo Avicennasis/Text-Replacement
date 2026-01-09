@@ -100,6 +100,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('masterSwitch').addEventListener('change', (e) => {
         updateMasterSwitch(e.target.checked);
     });
+
+    // Listen for Export button click
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        exportRules();
+    });
+
+    // Listen for Import button click (triggers hidden file input)
+    document.getElementById('importBtn').addEventListener('click', () => {
+        document.getElementById('importFile').click();
+    });
+
+    // Listen for file selection
+    document.getElementById('importFile').addEventListener('change', (e) => {
+        importRules(e.target.files[0]);
+    });
 });
 
 /**
@@ -501,4 +516,190 @@ function showStatus(message, isError = false) {
             statusEl.textContent = '';
         }, STATUS_DISPLAY_DURATION_MS);
     }
+}
+
+// -----------------------------------------------------------------------------
+// EXPORT/IMPORT FUNCTIONALITY
+// Allows users to backup their rules and share them between devices.
+// -----------------------------------------------------------------------------
+
+/**
+ * Exports all replacement rules to a JSON file.
+ * This creates a downloadable backup that users can save and import later.
+ */
+function exportRules() {
+    chrome.storage.sync.get('wordMap', (data) => {
+        // Error handling: Check if the Chrome API call failed
+        if (chrome.runtime.lastError) {
+            Logger.error('Failed to get word map for export:', chrome.runtime.lastError);
+            showStatus('Error loading rules for export.', true);
+            return;
+        }
+
+        const wordMap = data.wordMap || {};
+
+        // Check if there are any rules to export
+        if (Object.keys(wordMap).length === 0) {
+            showStatus('No rules to export!', true);
+            return;
+        }
+
+        // Create a JSON export object with metadata
+        // This helps with version compatibility in the future
+        const exportData = {
+            version: '2.0', // Extension version
+            exportedAt: new Date().toISOString(), // Timestamp for user reference
+            rulesCount: Object.keys(wordMap).length,
+            rules: wordMap
+        };
+
+        // Convert to pretty-printed JSON (easier to read if user opens the file)
+        const jsonString = JSON.stringify(exportData, null, 2);
+
+        // Create a Blob (binary large object) from the JSON string
+        // This is required to create a downloadable file in the browser
+        const blob = new Blob([jsonString], { type: 'application/json' });
+
+        // Create a temporary download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // Generate filename with current date for easy organization
+        // Example: "text-replacement-rules-2025-01-09.json"
+        const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        a.download = `text-replacement-rules-${dateStr}.json`;
+
+        // Trigger the download by programmatically clicking the link
+        document.body.appendChild(a);
+        a.click();
+
+        // Clean up: remove the temporary link and revoke the blob URL
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        Logger.debug('Rules exported successfully:', Object.keys(wordMap).length, 'rules');
+        showStatus(`Exported ${Object.keys(wordMap).length} rules successfully!`);
+    });
+}
+
+/**
+ * Imports replacement rules from a JSON file.
+ * Users can choose to merge with existing rules or replace them entirely.
+ *
+ * @param {File} file - The JSON file selected by the user
+ */
+function importRules(file) {
+    // Validation: Ensure a file was actually selected
+    if (!file) {
+        Logger.warn('Import attempted with no file selected');
+        return;
+    }
+
+    // Validation: Check file type (basic security check)
+    if (!file.name.endsWith('.json')) {
+        showStatus('Please select a valid JSON file!', true);
+        return;
+    }
+
+    // FileReader API allows us to read the contents of the file
+    const reader = new FileReader();
+
+    // This function runs after the file is successfully read
+    reader.onload = (e) => {
+        try {
+            // Parse the JSON file contents
+            const importData = JSON.parse(e.target.result);
+
+            // Validation: Check if this is a valid export file
+            if (!importData.rules || typeof importData.rules !== 'object') {
+                showStatus('Invalid file format! Please select a valid export file.', true);
+                Logger.error('Invalid import file structure:', importData);
+                return;
+            }
+
+            const importedRules = importData.rules;
+            const importCount = Object.keys(importedRules).length;
+
+            // Validation: Check if the file has any rules
+            if (importCount === 0) {
+                showStatus('The import file contains no rules!', true);
+                return;
+            }
+
+            // Ask user how they want to import (merge or replace)
+            // Using confirm() for simplicity - could be upgraded to a custom modal later
+            const shouldReplace = confirm(
+                `Found ${importCount} rules in the file.\n\n` +
+                `Click OK to REPLACE all existing rules.\n` +
+                `Click Cancel to MERGE with existing rules.`
+            );
+
+            // Get current rules from storage
+            chrome.storage.sync.get('wordMap', (data) => {
+                if (chrome.runtime.lastError) {
+                    Logger.error('Failed to get word map for import:', chrome.runtime.lastError);
+                    showStatus('Error loading current rules.', true);
+                    return;
+                }
+
+                let finalRules;
+
+                if (shouldReplace) {
+                    // REPLACE mode: Use only the imported rules
+                    finalRules = importedRules;
+                    Logger.debug('Import mode: REPLACE');
+                } else {
+                    // MERGE mode: Combine existing and imported rules
+                    // Imported rules overwrite existing ones if there's a conflict
+                    finalRules = { ...data.wordMap, ...importedRules };
+                    Logger.debug('Import mode: MERGE');
+                }
+
+                // Validation: Check if result would exceed rule limit
+                const finalCount = Object.keys(finalRules).length;
+                if (finalCount > MAX_RULES) {
+                    showStatus(`Import would exceed maximum of ${MAX_RULES} rules! (Would have ${finalCount})`, true);
+                    return;
+                }
+
+                // Validation: Check storage quota
+                const quotaError = validateStorageQuota(finalRules);
+                if (quotaError) {
+                    showStatus(quotaError, true);
+                    return;
+                }
+
+                // Save the imported rules
+                chrome.storage.sync.set({ wordMap: finalRules }, () => {
+                    if (chrome.runtime.lastError) {
+                        Logger.error('Failed to save imported rules:', chrome.runtime.lastError);
+                        showStatus('Error saving imported rules.', true);
+                    } else {
+                        Logger.debug('Import successful:', finalCount, 'total rules');
+                        loadWordMap(); // Reload the UI to show new rules
+                        showStatus(`Successfully imported ${importCount} rules! Total: ${finalCount}`);
+                    }
+                });
+            });
+
+        } catch (error) {
+            // Handle JSON parsing errors or other exceptions
+            Logger.error('Failed to parse import file:', error);
+            showStatus('Invalid JSON file! Please check the file format.', true);
+        }
+    };
+
+    // This function runs if file reading fails
+    reader.onerror = () => {
+        Logger.error('Failed to read import file:', reader.error);
+        showStatus('Error reading file. Please try again.', true);
+    };
+
+    // Start reading the file as text
+    // This is asynchronous - the onload function above will be called when done
+    reader.readAsText(file);
+
+    // Reset the file input so the same file can be selected again if needed
+    document.getElementById('importFile').value = '';
 }
