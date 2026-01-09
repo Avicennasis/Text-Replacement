@@ -399,52 +399,53 @@
 
         <div class="master-switch-container">
             <span class="master-label">Extension Enabled</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="masterSwitch">
-                <span class="slider"></span>
+            <label class="toggle-switch" aria-label="Toggle extension on/off">
+                <input type="checkbox" id="masterSwitch" aria-label="Enable or disable text replacement extension">
+                <span class="slider" aria-hidden="true"></span>
             </label>
         </div>
 
         <!-- Export/Import Section -->
-        <div class="export-import-section">
-            <button id="exportBtn" class="btn-secondary">📥 Export Rules</button>
-            <button id="importBtn" class="btn-secondary">📤 Import Rules</button>
-            <input type="file" id="importFile" accept=".json" style="display: none;">
+        <div class="export-import-section" role="group" aria-label="Rule backup and restore">
+            <button id="exportBtn" class="btn-secondary" aria-label="Export all rules to JSON file">📥 Export Rules</button>
+            <button id="importBtn" class="btn-secondary" aria-label="Import rules from JSON file">📤 Import Rules</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;" aria-label="Select JSON file to import">
         </div>
 
-        <div id="status"></div>
+        <div id="status" role="status" aria-live="polite"></div>
 
-        <form id="addReplacementForm" class="add-section">
+        <form id="addReplacementForm" class="add-section" aria-label="Add new replacement rule">
             <div class="input-group">
                 <label for="newOriginal">Original String</label>
                 <input type="text" id="newOriginal" name="newOriginal" placeholder="e.g. 'cat'" required
-                    autocomplete="off">
+                    autocomplete="off" aria-label="Text to find and replace" aria-required="true">
             </div>
 
             <div class="input-group">
                 <label for="newReplacement">Replacement String</label>
                 <input type="text" id="newReplacement" name="newReplacement" placeholder="e.g. 'dog'" required
-                    autocomplete="off">
+                    autocomplete="off" aria-label="Text to replace it with" aria-required="true">
             </div>
 
             <div class="input-group" style="flex: 0 0 auto; align-items: center; min-width: 80px;">
                 <label>Match Case</label>
                 <!-- Form specific toggle -->
                 <div style="margin-top: 12px;">
-                    <label class="toggle-switch" title="Match Case?">
-                        <input type="checkbox" id="newCaseSensitive" name="newCaseSensitive">
-                        <span class="slider"></span>
+                    <label class="toggle-switch" title="Match Case?" aria-label="Enable case-sensitive matching">
+                        <input type="checkbox" id="newCaseSensitive" name="newCaseSensitive" aria-label="Match exact capitalization">
+                        <span class="slider" aria-hidden="true"></span>
                     </label>
                 </div>
             </div>
 
-            <button type="submit" class="btn-add">Add Rule</button>
+            <button type="submit" class="btn-add" aria-label="Add this replacement rule">Add Rule</button>
         </form>
 
         <!-- Search Box -->
-        <div class="search-container">
-            <input type="text" id="searchBox" placeholder="🔍 Search rules..." autocomplete="off">
-            <span id="searchResults" class="search-results"></span>
+        <div class="search-container" role="search">
+            <input type="text" id="searchBox" placeholder="🔍 Search rules..." autocomplete="off"
+                   aria-label="Search replacement rules by original or replacement text">
+            <span id="searchResults" class="search-results" role="status" aria-live="polite"></span>
         </div>
 
         <div class="table-container">

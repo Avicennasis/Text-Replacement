@@ -187,19 +187,30 @@ function loadWordMap() {
 
 /**
  * Helper function to create a fancy Toggle Slider element.
+ *
+ * @param {boolean} checked - Initial checked state
+ * @param {Function} changeCallback - Callback when toggle changes
+ * @param {string} ariaLabel - Accessibility label for the toggle
  */
-function createToggle(checked, changeCallback) {
+function createToggle(checked, changeCallback, ariaLabel = '') {
     const label = document.createElement('label');
     label.className = 'toggle-switch';
+    if (ariaLabel) {
+        label.setAttribute('aria-label', ariaLabel);
+    }
 
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = checked;
+    if (ariaLabel) {
+        input.setAttribute('aria-label', ariaLabel);
+    }
     // When clicked, run the provided callback function
     input.addEventListener('change', (e) => changeCallback(e.target.checked));
 
     const slider = document.createElement('span');
     slider.className = 'slider';
+    slider.setAttribute('aria-hidden', 'true'); // Hide decorative slider from screen readers
 
     label.appendChild(input);
     label.appendChild(slider);
@@ -224,6 +235,7 @@ function addRowToTable(originalText, replacement, caseSensitive, enabled) {
     const originalTextInput = document.createElement('input');
     originalTextInput.type = 'text';
     originalTextInput.value = originalText;
+    originalTextInput.setAttribute('aria-label', `Original text: ${originalText}`);
     // Update storage when text changes
     originalTextInput.addEventListener('change', () => updateReplacement(originalText, 'originalText', originalTextInput.value));
 
@@ -231,20 +243,29 @@ function addRowToTable(originalText, replacement, caseSensitive, enabled) {
     const replacementTextInput = document.createElement('input');
     replacementTextInput.type = 'text';
     replacementTextInput.value = replacement;
+    replacementTextInput.setAttribute('aria-label', `Replacement text for "${originalText}": ${replacement}`);
     // Update storage when text changes
     replacementTextInput.addEventListener('change', () => updateReplacement(originalText, 'replacement', replacementTextInput.value));
 
     // 3. Match Case Toggle
-    const caseToggle = createToggle(caseSensitive, (checked) => {
-        updateReplacement(originalText, 'caseSensitive', checked);
-    });
+    const caseToggle = createToggle(
+        caseSensitive,
+        (checked) => {
+            updateReplacement(originalText, 'caseSensitive', checked);
+        },
+        `Case-sensitive matching for "${originalText}"`
+    );
 
     // 4. Enabled/Disabled Toggle
-    const enabledToggle = createToggle(enabled, (checked) => {
-        updateReplacement(originalText, 'enabled', checked);
-        // Visual feedback: fade out disabled rows
-        row.style.opacity = checked ? '1' : '0.5';
-    });
+    const enabledToggle = createToggle(
+        enabled,
+        (checked) => {
+            updateReplacement(originalText, 'enabled', checked);
+            // Visual feedback: fade out disabled rows
+            row.style.opacity = checked ? '1' : '0.5';
+        },
+        `Enable or disable rule for "${originalText}"`
+    );
 
     // Set initial visual state
     row.style.opacity = enabled ? '1' : '0.5';
@@ -253,6 +274,7 @@ function addRowToTable(originalText, replacement, caseSensitive, enabled) {
     const removeButton = document.createElement('button');
     removeButton.textContent = 'Remove';
     removeButton.className = 'btn-remove';
+    removeButton.setAttribute('aria-label', `Remove replacement rule for "${originalText}"`);
     removeButton.addEventListener('click', () => removeReplacement(originalText));
 
     // Assemble the row structure
