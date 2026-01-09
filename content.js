@@ -273,48 +273,64 @@ function debounce(func, wait) {
 }
 
 // -----------------------------------------------------------------------------
+// DYNAMIC OBSERVER
+// This watches for new content (like "Load More" buttons or infinite scroll).
+//
+// RACE CONDITION FIX:
+// We start the observer IMMEDIATELY (before loading rules from storage).
+// This ensures we don't miss any dynamic content that loads while we're
+// fetching settings from Chrome's storage API.
+//
+// The observer is safe to run early because processElement() has built-in guards
+// that skip processing if regexes aren't ready yet.
+// -----------------------------------------------------------------------------
+
+const observer = new MutationObserver((mutations) => {
+  if (!extensionEnabled) return;
+
+  // PERFORMANCE OPTIMIZATION:
+  // Instead of re-scanning the ENTIRE page on every change, we only process
+  // the specific nodes that were just added. This is WAY faster!
+  //
+  // Example: When Twitter adds 10 new tweets, we only scan those 10 tweets,
+  // not the entire page with thousands of existing tweets.
+  for (const mutation of mutations) {
+    // Only care about added nodes (ignore attribute/text changes to existing nodes)
+    if (mutation.addedNodes.length > 0) {
+      for (const node of mutation.addedNodes) {
+        // Process the newly-added node (and its children if it's an element)
+        processElement(node);
+      }
+    }
+  }
+});
+
+// Start watching immediately (even before rules load)
+// This prevents race conditions where content loads before settings are ready
+// childList: watch for nodes being added/removed
+// subtree: watch the entire tree, not just direct children
+if (document.body) {
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// -----------------------------------------------------------------------------
 // INITIALIZATION
-// This runs when the page loads.
+// Load settings and process the initial page.
+// This runs asynchronously, but the observer above is already watching!
 // -----------------------------------------------------------------------------
 chrome.storage.sync.get(['wordMap', 'extensionEnabled'], (data) => {
+  // Handle errors gracefully
+  if (chrome.runtime.lastError) {
+    console.error('Text Replacement: Failed to load settings:', chrome.runtime.lastError);
+    return;
+  }
+
   extensionEnabled = data.extensionEnabled !== false;
 
   // Build the rules and run the first pass
   if (data.wordMap && extensionEnabled) {
     updateRegexes(data.wordMap);
     processDocument();
-  }
-
-  // -----------------------------------------------------------------------------
-  // DYNAMIC OBSERVER
-  // This watches for new content (like "Load More" buttons or infinite scroll).
-  // -----------------------------------------------------------------------------
-
-  const observer = new MutationObserver((mutations) => {
-    if (!extensionEnabled) return;
-
-    // PERFORMANCE OPTIMIZATION:
-    // Instead of re-scanning the ENTIRE page on every change, we only process
-    // the specific nodes that were just added. This is WAY faster!
-    //
-    // Example: When Twitter adds 10 new tweets, we only scan those 10 tweets,
-    // not the entire page with thousands of existing tweets.
-    for (const mutation of mutations) {
-      // Only care about added nodes (ignore attribute/text changes to existing nodes)
-      if (mutation.addedNodes.length > 0) {
-        for (const node of mutation.addedNodes) {
-          // Process the newly-added node (and its children if it's an element)
-          processElement(node);
-        }
-      }
-    }
-  });
-
-  // Start watching the body for changes
-  // childList: watch for nodes being added/removed
-  // subtree: watch the entire tree, not just direct children
-  if (document.body) {
-    observer.observe(document.body, { childList: true, subtree: true });
   }
 });
 
@@ -324,18 +340,40 @@ chrome.storage.sync.get(['wordMap', 'extensionEnabled'], (data) => {
 // -----------------------------------------------------------------------------
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'sync') {
-    // Correctly update Master Switch state
+    // Track what actually changed to avoid unnecessary work
+    let needsRebuild = false;
+    let needsReprocess = false;
+
+    // Check if Master Switch changed
     if (changes.extensionEnabled) {
+      const wasEnabled = extensionEnabled;
       extensionEnabled = changes.extensionEnabled.newValue;
+
+      // If we're turning ON (was off, now on), we need to process the page
+      if (!wasEnabled && extensionEnabled) {
+        needsReprocess = true;
+      }
+      // If we're turning OFF, no need to do anything (processDocument checks the flag)
     }
 
-    // Correctly update Rules
+    // Check if Rules changed
     if (changes.wordMap) {
+      // GRANULAR CHANGE DETECTION:
+      // We rebuild the regexes (necessary), but only reprocess the page if:
+      // 1. Extension is currently enabled, AND
+      // 2. The rules actually changed (not just toggled off/on)
       updateRegexes(changes.wordMap.newValue || {});
+      needsRebuild = true;
+
+      // Only reprocess if extension is enabled
+      if (extensionEnabled) {
+        needsReprocess = true;
+      }
     }
 
-    // Apply immediate updates if enabled
-    if (extensionEnabled) {
+    // OPTIMIZATION: Only re-scan the document if we actually need to
+    // This prevents unnecessary work when toggling a rule off (which doesn't require re-scanning)
+    if (needsReprocess && extensionEnabled) {
       processDocument();
     }
   }

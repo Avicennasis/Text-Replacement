@@ -230,6 +230,16 @@ function addRowToTable(originalText, replacement, caseSensitive, enabled) {
  * Updates a specific field of an existing rule in storage.
  */
 function updateReplacement(originalText, field, newValue) {
+    // VALIDATION: Prevent empty original text (would match nothing - user error)
+    // Note: We allow empty replacement text (valid use case: delete the original)
+    if (field === 'originalText' && typeof newValue === 'string') {
+        if (!newValue || !newValue.trim()) {
+            showStatus('Original text cannot be empty!', true);
+            loadWordMap(); // Reset UI to previous valid state
+            return;
+        }
+    }
+
     // SAFETY CHECK: Validate pattern length when editing text fields
     // This prevents users from accidentally creating overly long patterns
     if ((field === 'originalText' || field === 'replacement') && typeof newValue === 'string') {
@@ -297,6 +307,22 @@ function addReplacement() {
     const newOriginal = document.getElementById('newOriginal').value;
     const newReplacement = document.getElementById('newReplacement').value;
     const newCaseSensitive = document.getElementById('newCaseSensitive').checked;
+
+    // VALIDATION: Prevent empty strings
+    // Empty original text would match nothing, and empty replacement would just delete text
+    // Both are confusing and likely user errors, so we reject them
+    if (!newOriginal || !newOriginal.trim()) {
+        showStatus('Original text cannot be empty!', true);
+        return;
+    }
+
+    if (!newReplacement && newReplacement !== '') {
+        showStatus('Replacement text cannot be empty!', true);
+        return;
+    }
+
+    // Note: We allow empty replacement string (newReplacement === '') because
+    // that's a valid use case: user wants to delete/remove the original text entirely
 
     // SAFETY CHECK: Validate pattern length to prevent performance issues
     // Very long patterns can cause the browser to freeze when processing large pages
