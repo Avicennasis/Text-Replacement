@@ -1,6 +1,8 @@
-# Avic's Text Replacement Extension
+# Avic's Text Replacement Extension for Chrome
 
 A powerful, secure, and modern Google Chrome extension that automatically replaces text on websites you visit. Customize your web experience by swapping words, phrases, or names with your own preferred alternatives.
+
+> **Note:** There is a [Firefox port of this Text Replacement extension](https://github.com/Avicennasis/Firefox-Text-Replacement). That codebase has been adapted to work with Firefox's extension APIs and manifest format.
 
 ## Features
 
