@@ -26,6 +26,12 @@ const QUOTA_BYTES_PER_ITEM = chrome.storage.sync.QUOTA_BYTES_PER_ITEM || 8192; /
 const MAX_RULES = 255; // Maximum number of replacement rules allowed
 const MAX_PATTERN_LENGTH = 255; // Maximum length for original text or replacement text
 
+// -----------------------------------------------------------------------------
+// UI CONSTANTS
+// These control the behavior of user interface elements.
+// -----------------------------------------------------------------------------
+const STATUS_DISPLAY_DURATION_MS = 3000; // How long to show status messages (3 seconds)
+
 /**
  * Estimates the storage size (in bytes) of the wordMap object.
  * Chrome storage counts JSON-serialized size, so we stringify to measure.
@@ -88,6 +94,13 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function loadSettings() {
     chrome.storage.sync.get('extensionEnabled', (data) => {
+        // Error handling: Check if the Chrome API call failed
+        if (chrome.runtime.lastError) {
+            console.error('Failed to load settings:', chrome.runtime.lastError);
+            showStatus('Error loading settings. Please refresh the page.', true);
+            return;
+        }
+
         // Default to TRUE if the setting doesn't exist yet
         const isEnabled = data.extensionEnabled !== false;
         document.getElementById('masterSwitch').checked = isEnabled;
@@ -113,8 +126,10 @@ function updateMasterSwitch(isEnabled) {
  */
 function loadWordMap() {
     chrome.storage.sync.get('wordMap', (data) => {
+        // Error handling: Check if the Chrome API call failed
         if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError);
+            console.error('Failed to load word map:', chrome.runtime.lastError);
+            showStatus('Error loading rules. Please refresh the page.', true);
             return;
         }
 
@@ -251,6 +266,14 @@ function updateReplacement(originalText, field, newValue) {
     }
 
     chrome.storage.sync.get('wordMap', (data) => {
+        // Error handling: Check if the Chrome API call failed
+        if (chrome.runtime.lastError) {
+            console.error('Failed to get word map for update:', chrome.runtime.lastError);
+            showStatus('Error loading data. Changes not saved.', true);
+            loadWordMap(); // Revert UI to previous state
+            return;
+        }
+
         const wordMap = data.wordMap || {};
         if (!wordMap[originalText]) return;
 
@@ -259,14 +282,36 @@ function updateReplacement(originalText, field, newValue) {
         // Special handling for renaming the key (Original Text)
         if (field === 'originalText') {
             // Prevent overwriting existing keys or creating invalid ones
-            if (!newValue || (wordMap[newValue] && newValue !== originalText)) {
+            if (!newValue) {
                 loadWordMap(); // Reset UI to previous valid state
-                showStatus('Invalid key or key already exists.', true);
+                showStatus('Original text cannot be empty.', true);
                 return;
             }
-            // Delete old key, add new key
-            delete wordMap[originalText];
-            wordMap[newValue] = originalData;
+
+            // Check if newValue already exists (and isn't just a case change of the same key)
+            if (wordMap[newValue] && newValue !== originalText) {
+                loadWordMap(); // Reset UI to previous valid state
+                showStatus('A rule with this original text already exists.', true);
+                return;
+            }
+
+            // EDGE CASE: Prevent renames that only differ in case (cat → CAT)
+            // This can cause confusion with case-insensitive matching rules
+            // For example, if you have "cat" (case-insensitive) and rename it to "Cat",
+            // it would still match "CAT" or "cat", making the rename pointless
+            if (newValue.toLowerCase() !== originalText.toLowerCase()) {
+                // This is a real rename (not just case change), allow it
+                delete wordMap[originalText];
+                wordMap[newValue] = originalData;
+            } else if (newValue === originalText) {
+                // Exact same value, no change needed (user probably just re-focused the field)
+                return;
+            } else {
+                // Case-only change detected (cat → Cat, cat → CAT, etc.)
+                loadWordMap(); // Reset UI to previous valid state
+                showStatus('Cannot rename to only differ in case (e.g., "cat" to "Cat"). Create a new rule instead.', true);
+                return;
+            }
         } else {
             // Normal update
             wordMap[originalText][field] = newValue;
@@ -337,6 +382,13 @@ function addReplacement() {
     }
 
     chrome.storage.sync.get('wordMap', (data) => {
+        // Error handling: Check if the Chrome API call failed
+        if (chrome.runtime.lastError) {
+            console.error('Failed to get word map for adding rule:', chrome.runtime.lastError);
+            showStatus('Error loading data. Rule not added.', true);
+            return;
+        }
+
         const wordMap = data.wordMap || {};
 
         // SAFETY CHECK: Limit total number of rules to prevent browser slowdown
@@ -392,13 +444,21 @@ function addReplacement() {
  */
 function removeReplacement(originalText) {
     chrome.storage.sync.get('wordMap', (data) => {
+        // Error handling: Check if the Chrome API call failed
+        if (chrome.runtime.lastError) {
+            console.error('Failed to get word map for removal:', chrome.runtime.lastError);
+            showStatus('Error loading data. Rule not removed.', true);
+            return;
+        }
+
         const wordMap = data.wordMap || {};
         delete wordMap[originalText]; // Remove key
 
         chrome.storage.sync.set({ wordMap }, () => {
             if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError);
+                console.error('Failed to save after removal:', chrome.runtime.lastError);
                 showStatus('Error removing replacement.', true);
+                loadWordMap(); // Reload to revert to previous state
             } else {
                 loadWordMap(); // Reload table to reflect removal
                 showStatus('Replacement removed.');
@@ -409,6 +469,10 @@ function removeReplacement(originalText) {
 
 /**
  * Displays a temporary status message to the user.
+ * The message automatically disappears after STATUS_DISPLAY_DURATION_MS.
+ *
+ * @param {string} message - The message to display
+ * @param {boolean} isError - Whether this is an error (red) or success (green) message
  */
 function showStatus(message, isError = false) {
     const statusEl = document.getElementById('status');
@@ -416,9 +480,9 @@ function showStatus(message, isError = false) {
         statusEl.textContent = message;
         statusEl.style.color = isError ? '#ff1744' : '#00e676';
 
-        // Clear message after 3 seconds
+        // Clear message after configured duration
         setTimeout(() => {
             statusEl.textContent = '';
-        }, 3000);
+        }, STATUS_DISPLAY_DURATION_MS);
     }
 }
