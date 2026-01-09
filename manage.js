@@ -2,9 +2,59 @@
 // -----------------------------------------------------------------------------
 // This script handles the "Manage Replacements" page UI.
 // It allows users to Add, Remove, and Modify replacement rules.
-// All data is saved to 'chrome.storage.sync', which syncs across your 
+// All data is saved to 'chrome.storage.sync', which syncs across your
 // signed-in Chrome devices.
 // -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// CHROME STORAGE LIMITS
+// These limits are enforced by Google Chrome, not by this extension.
+// - SYNC_QUOTA_BYTES: Maximum total storage (100 KB for all your rules combined)
+// - QUOTA_BYTES_PER_ITEM: Maximum size for a single storage item (8 KB)
+// We check these limits before saving to give you helpful error messages.
+// -----------------------------------------------------------------------------
+const SYNC_QUOTA_BYTES = chrome.storage.sync.QUOTA_BYTES || 102400; // 100 KB
+const QUOTA_BYTES_PER_ITEM = chrome.storage.sync.QUOTA_BYTES_PER_ITEM || 8192; // 8 KB
+
+/**
+ * Estimates the storage size (in bytes) of the wordMap object.
+ * Chrome storage counts JSON-serialized size, so we stringify to measure.
+ *
+ * @param {Object} wordMap - The replacement rules object
+ * @returns {number} - Estimated size in bytes
+ */
+function estimateStorageSize(wordMap) {
+    // Chrome stores data as JSON, so we need to measure the JSON string length.
+    // Each character in a JS string is approximately 1 byte in UTF-8 for ASCII,
+    // but can be up to 4 bytes for special characters. We use a conservative estimate.
+    const jsonString = JSON.stringify({ wordMap });
+    return new Blob([jsonString]).size; // Accurate byte size
+}
+
+/**
+ * Checks if adding/updating a rule would exceed Chrome's storage limits.
+ * Returns an error message if limits would be exceeded, or null if OK.
+ *
+ * @param {Object} wordMap - The proposed wordMap to save
+ * @returns {string|null} - Error message or null if valid
+ */
+function validateStorageQuota(wordMap) {
+    const estimatedSize = estimateStorageSize(wordMap);
+
+    // Check total storage limit (Google Chrome's limit, not ours!)
+    if (estimatedSize > SYNC_QUOTA_BYTES) {
+        const usedKB = (estimatedSize / 1024).toFixed(1);
+        const maxKB = (SYNC_QUOTA_BYTES / 1024).toFixed(0);
+        return `Storage full! You're using ${usedKB} KB of Google Chrome's ${maxKB} KB limit. Please remove some rules to free up space.`;
+    }
+
+    // Check per-item limit (less common, but can happen with very long replacement texts)
+    if (estimatedSize > QUOTA_BYTES_PER_ITEM) {
+        return `This rule is too large. Google Chrome limits individual storage items to 8 KB.`;
+    }
+
+    return null; // All good!
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // Load saved settings when the page starts
@@ -192,6 +242,15 @@ function updateReplacement(originalText, field, newValue) {
             wordMap[originalText][field] = newValue;
         }
 
+        // IMPORTANT: Validate storage quota BEFORE attempting to save.
+        // This check protects against exceeding Chrome's limits when editing rules.
+        const quotaError = validateStorageQuota(wordMap);
+        if (quotaError) {
+            showStatus(quotaError, true);
+            loadWordMap(); // Revert UI to previous valid state
+            return;
+        }
+
         // Save back to storage
         chrome.storage.sync.set({ wordMap }, () => {
             if (chrome.runtime.lastError) {
@@ -234,6 +293,14 @@ function addReplacement() {
             caseSensitive: newCaseSensitive,
             enabled: true
         };
+
+        // IMPORTANT: Validate storage quota BEFORE attempting to save.
+        // This prevents cryptic errors and gives users clear feedback.
+        const quotaError = validateStorageQuota(wordMap);
+        if (quotaError) {
+            showStatus(quotaError, true);
+            return;
+        }
 
         // Save
         chrome.storage.sync.set({ wordMap }, () => {
