@@ -141,7 +141,7 @@
             align-items: center;
             justify-content: center;
             gap: 16px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             padding: 20px;
             background: rgba(255, 255, 255, 0.02);
             border-radius: 16px;
@@ -152,6 +152,45 @@
             font-weight: 600;
             font-size: 1.1rem;
             color: var(--text-main);
+        }
+
+        /* Export/Import Section */
+        .export-import-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 10px 20px;
+            color: var(--text-main);
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(79, 172, 254, 0.1);
+            border-color: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 172, 254, 0.2);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
         }
 
         /* Form Section */
@@ -229,6 +268,44 @@
 
         .btn-add:active {
             transform: translateY(0);
+        }
+
+        /* Search Box */
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+        }
+
+        #searchBox {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        #searchBox:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 0 4px rgba(0, 242, 254, 0.1);
+        }
+
+        .search-results {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
         }
 
         /* Table Section */
@@ -322,40 +399,54 @@
 
         <div class="master-switch-container">
             <span class="master-label">Extension Enabled</span>
-            <label class="toggle-switch">
-                <input type="checkbox" id="masterSwitch">
-                <span class="slider"></span>
+            <label class="toggle-switch" aria-label="Toggle extension on/off">
+                <input type="checkbox" id="masterSwitch" aria-label="Enable or disable text replacement extension">
+                <span class="slider" aria-hidden="true"></span>
             </label>
         </div>
 
-        <div id="status"></div>
+        <!-- Export/Import Section -->
+        <div class="export-import-section" role="group" aria-label="Rule backup and restore">
+            <button id="exportBtn" class="btn-secondary" aria-label="Export all rules to JSON file">📥 Export Rules</button>
+            <button id="importBtn" class="btn-secondary" aria-label="Import rules from JSON file">📤 Import Rules</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;" aria-label="Select JSON file to import">
+        </div>
 
-        <form id="addReplacementForm" class="add-section">
+        <div id="status" role="status" aria-live="polite"></div>
+
+        <form id="addReplacementForm" class="add-section" aria-label="Add new replacement rule">
             <div class="input-group">
                 <label for="newOriginal">Original String</label>
                 <input type="text" id="newOriginal" name="newOriginal" placeholder="e.g. 'cat'" required
-                    autocomplete="off">
+                    autocomplete="off" aria-label="Text to find and replace" aria-required="true">
             </div>
 
             <div class="input-group">
                 <label for="newReplacement">Replacement String</label>
                 <input type="text" id="newReplacement" name="newReplacement" placeholder="e.g. 'dog'" required
-                    autocomplete="off">
+                    autocomplete="off" aria-label="Text to replace it with" aria-required="true">
             </div>
 
             <div class="input-group" style="flex: 0 0 auto; align-items: center; min-width: 80px;">
                 <label>Match Case</label>
                 <!-- Form specific toggle -->
                 <div style="margin-top: 12px;">
-                    <label class="toggle-switch" title="Match Case?">
-                        <input type="checkbox" id="newCaseSensitive" name="newCaseSensitive">
-                        <span class="slider"></span>
+                    <label class="toggle-switch" title="Match Case?" aria-label="Enable case-sensitive matching">
+                        <input type="checkbox" id="newCaseSensitive" name="newCaseSensitive" aria-label="Match exact capitalization">
+                        <span class="slider" aria-hidden="true"></span>
                     </label>
                 </div>
             </div>
 
-            <button type="submit" class="btn-add">Add Rule</button>
+            <button type="submit" class="btn-add" aria-label="Add this replacement rule">Add Rule</button>
         </form>
+
+        <!-- Search Box -->
+        <div class="search-container" role="search">
+            <input type="text" id="searchBox" placeholder="🔍 Search rules..." autocomplete="off"
+                   aria-label="Search replacement rules by original or replacement text">
+            <span id="searchResults" class="search-results" role="status" aria-live="polite"></span>
+        </div>
 
         <div class="table-container">
             <table>
